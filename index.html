@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Night Kiosk Dashboard</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg-night:#0b0f14; --card-night:#121826; --txt-night:#e5e7eb; --muted-night:#9ca3af;
+  --bg-day:#f6f7fb;   --card-day:#ffffff;  --txt-day:#111827;  --muted-day:#6b7280;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; height:100vh; font-family:Inter,system-ui,-apple-system,sans-serif;
+  background:var(--bg-night); color:var(--txt-night);
+}
+.day{ background:var(--bg-day); color:var(--txt-day); }
+
+.wrap{
+  height:100%;
+  padding:20px;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  gap:16px;
+}
+
+.card{
+  background:var(--card-night);
+  border-radius:16px;
+  padding:18px;
+}
+.day .card{ background:var(--card-day); }
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.time{ font-size:56px; font-weight:600; letter-spacing:0.5px; }
+.date{ font-size:16px; color:var(--muted-night); }
+.day .date{ color:var(--muted-day); }
+
+.grid{
+  display:grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-rows: auto auto;
+  gap:16px;
+}
+.fullrow{ grid-column: 1 / -1; }
+
+.h2{
+  font-size:16px;
+  font-weight:500;
+  margin-bottom:10px;
+  color:var(--muted-night);
+}
+.day .h2{ color:var(--muted-day); }
+
+.event{ margin-bottom:10px; }
+.ev-title{ font-size:15px; }
+.ev-time{ font-size:13px; color:var(--muted-night); }
+.day .ev-time{ color:var(--muted-day); }
+
+.weather{ display:flex; align-items:center; gap:12px; }
+.temp{ font-size:36px; font-weight:600; }
+.city{ font-size:14px; color:var(--muted-night); }
+.day .city{ color:var(--muted-day); }
+
+.bigline{ font-size:22px; font-weight:500; line-height:1.3; }
+.subline{ font-size:13px; color:var(--muted-night); margin-top:6px; }
+.day .subline{ color:var(--muted-day); }
+
+.pill{
+  display:inline-flex; align-items:center;
+  padding:6px 10px; border-radius:999px;
+  background: rgba(79,140,255,0.12);
+  font-size:12px;
+}
+
+.footer{
+  text-align:center;
+  font-size:13px;
+  color:var(--muted-night);
+}
+.day .footer{ color:var(--muted-day); }
+</style>
+</head>
+
+<body>
+<div id="app" class="wrap">
+
+  <!-- HEADER -->
+  <div class="card header">
+    <div>
+      <div id="time" class="time">--:--</div>
+      <div id="date" class="date">—</div>
+    </div>
+    <div class="date">Sterling, VA</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="grid">
+
+    <!-- CALENDAR -->
+    <div class="card">
+      <div class="h2">📅 Hoy & Mañana</div>
+      <div id="events">Cargando…</div>
+    </div>
+
+    <!-- WEATHER -->
+    <div class="card">
+      <div class="h2">🌦️ Clima</div>
+      <div class="weather">
+        <div class="temp" id="temp">—°</div>
+        <div>
+          <div id="wdesc">—</div>
+          <div class="city">Actual</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORD + ELECTRIC TIP -->
+    <div class="card fullrow">
+      <div class="h2">🧠 Word of the Day • ⚡ Electric Tip</div>
+
+      <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div style="min-width:280px; flex:1;">
+          <div class="pill">WORD</div>
+          <div id="wordDay" class="bigline" style="margin-top:10px;">—</div>
+          <div id="wordHint" class="subline">—</div>
+        </div>
+
+        <div style="min-width:280px; flex:1;">
+          <div class="pill">ELECTRIC</div>
+          <div id="elecTip" class="bigline" style="margin-top:10px;">—</div>
+          <div id="elecHint" class="subline">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">Descansa • Mañana sigues</div>
+
+</div>
+
+<script>
+/* ====== TIME (12h) ====== */
+function tick(){
+  const n=new Date();
+  document.getElementById('time').innerText =
+    n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  document.getElementById('date').innerText =
+    n.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+}
+setInterval(tick,1000); tick();
+
+/* ====== DAY / NIGHT AUTO ======
+   Day: 7:00 AM - 6:59 PM
+   Night: 7:00 PM - 6:59 AM
+*/
+function setTheme(){
+  const h=new Date().getHours();
+  const day = (h>=7 && h<19);
+  document.body.classList.toggle('day', day);
+}
+setInterval(setTheme,60000); setTheme();
+
+/* ====== WEATHER (Open-Meteo, Sterling VA) ====== */
+function weatherCodeToText(code){
+  // Minimal mapping; you can extend later
+  if (code === 0) return "Clear";
+  if (code === 1 || code === 2) return "Mostly clear";
+  if (code === 3) return "Cloudy";
+  if (code >= 45 && code <= 48) return "Fog";
+  if (code >= 51 && code <= 57) return "Drizzle";
+  if (code >= 61 && code <= 67) return "Rain";
+  if (code >= 71 && code <= 77) return "Snow";
+  if (code >= 80 && code <= 82) return "Showers";
+  if (code >= 95) return "Thunderstorm";
+  return "Weather";
+}
+
+(async ()=>{
+  try{
+    const url='https://api.open-meteo.com/v1/forecast?latitude=39.0067&longitude=-77.4291&current=temperature_2m,weather_code&temperature_unit=fahrenheit';
+    const r=await fetch(url);
+    const j=await r.json();
+    const t=Math.round(j.current.temperature_2m);
+    document.getElementById('temp').innerText = t+'°F';
+    document.getElementById('wdesc').innerText = weatherCodeToText(j.current.weather_code);
+  }catch(e){
+    document.getElementById('temp').innerText = '—°';
+    document.getElementById('wdesc').innerText = 'Offline';
+  }
+})();
+
+/* ====== CALENDAR (ICS → Hoy + Mañana) ======
+   IMPORTANT:
+   - Paste your public/secret ICS URL below.
+   - Many Google ICS feeds require a CORS-friendly proxy to fetch from a browser.
+   - If it fails, see notes at bottom of this script.
+*/
+const ICS_URL = 'PASTE_YOUR_ICS_URL_HERE';
+
+/* Basic ICS parser (SUMMARY + DTSTART)
+   NOTE: handles basic DTSTART:YYYYMMDD or DTSTART:YYYYMMDDTHHMMSSZ */
+function parseICS(text){
+  const lines=text.split(/\r?\n/);
+  const evs=[]; let ev=null;
+
+  // Handle folded lines (lines that start with space)
+  const unfolded=[];
+  for (let i=0;i<lines.length;i++){
+    const line=lines[i];
+    if(line.startsWith(' ') && unfolded.length){
+      unfolded[unfolded.length-1]+=line.slice(1);
+    } else {
+      unfolded.push(line);
+    }
+  }
+
+  for(const l of unfolded){
+    if(l==='BEGIN:VEVENT') ev={};
+    else if(l==='END:VEVENT'){ if(ev) evs.push(ev); ev=null; }
+    else if(ev){
+      if(l.startsWith('SUMMARY:')) ev.title=l.slice(8).trim();
+      if(l.startsWith('DTSTART')){
+        const v=l.split(':')[1]?.trim() || '';
+        ev.start = icsToDate(v);
+      }
+      if(l.startsWith('DTEND')){
+        const v=l.split(':')[1]?.trim() || '';
+        ev.end = icsToDate(v);
+      }
+      if(l.startsWith('LOCATION:')) ev.location=l.slice(9).trim();
+    }
+  }
+  return evs.filter(e=>e.title && e.start instanceof Date && !isNaN(e.start));
+}
+
+function icsToDate(v){
+  // All-day: YYYYMMDD
+  if(/^\d{8}$/.test(v)){
+    return new Date(Number(v.slice(0,4)), Number(v.slice(4,6))-1, Number(v.slice(6,8)), 0, 0, 0);
+  }
+  // Date-time: YYYYMMDDTHHMMSSZ or YYYYMMDDTHHMMSS
+  const m = v.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z)?$/);
+  if(m){
+    const [_,Y,Mo,D,H,Mi,S,Z] = m;
+    if(Z){
+      // UTC time
+      return new Date(Date.UTC(Number(Y),Number(Mo)-1,Number(D),Number(H),Number(Mi),Number(S)));
+    }
+    // local time
+    return new Date(Number(Y),Number(Mo)-1,Number(D),Number(H),Number(Mi),Number(S));
+  }
+  // fallback
+  return new Date(v);
+}
+
+function isSameDay(a,b){
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+
+function labelForDay(d){
+  const today=new Date();
+  const tomorrow=new Date(today.getFullYear(),today.getMonth(),today.getDate()+1);
+  if(isSameDay(d,today)) return "Hoy";
+  if(isSameDay(d,tomorrow)) return "Mañana";
+  return d.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});
+}
+
+(async ()=>{
+  const box=document.getElementById('events');
+  try{
+    if(!ICS_URL || ICS_URL.includes('PASTE_YOUR_ICS_URL_HERE')){
+      box.innerHTML = '<div class="event"><div class="ev-title">Configura tu ICS</div><div class="ev-time">Pega tu URL en ICS_URL</div></div>';
+      return;
+    }
+
+    const r=await fetch(ICS_URL);
+    const t=await r.text();
+
+    const evs=parseICS(t);
+
+    const now=new Date();
+    const startDay=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const endDay=new Date(startDay); endDay.setDate(endDay.getDate()+2);
+
+    const show = evs
+      .filter(e=>e.start>=startDay && e.start<endDay)
+      .sort((a,b)=>a.start-b.start);
+
+    box.innerHTML = show.length ? '' : 'Sin eventos';
+
+    let lastLabel = null;
+
+    show.forEach(e=>{
+      const dayLabel = labelForDay(e.start);
+
+      if(dayLabel !== lastLabel){
+        const sep=document.createElement('div');
+        sep.style.margin='10px 0 6px';
+        sep.style.fontSize='13px';
+        sep.style.color= document.body.classList.contains('day') ? 'var(--muted-day)' : 'var(--muted-night)';
+        sep.innerText = dayLabel.toUpperCase();
+        box.appendChild(sep);
+        lastLabel = dayLabel;
+      }
+
+      const d=document.createElement('div'); d.className='event';
+
+      const isAllDay = (e.start.getHours()===0 && e.start.getMinutes()===0 && (!e.end || (e.end.getHours()===0 && e.end.getMinutes()===0)));
+      const tm = isAllDay ? 'All day' : e.start.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+
+      d.innerHTML = `<div class="ev-title">${escapeHtml(e.title)}</div>
+                     <div class="ev-time">${tm}${e.location ? " • "+escapeHtml(e.location) : ""}</div>`;
+      box.appendChild(d);
+    });
+
+  }catch(e){
+    box.innerHTML = '<div class="event"><div class="ev-title">No se pudo cargar el calendario</div><div class="ev-time">Si es Google ICS, puede requerir un proxy por CORS.</div></div>';
+  }
+})();
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (m) => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+/* ====== WORD OF THE DAY (stable per day) ====== */
+const WORDS = [
+  { w:"Focus",  h:"Enfócate en lo importante." },
+  { w:"Calm",   h:"Respira y baja revoluciones." },
+  { w:"Effort", h:"El esfuerzo cuenta aunque sea poco." },
+  { w:"Improve",h:"1% mejor hoy." },
+  { w:"Patience",h:"Paciencia = consistencia." },
+  { w:"Practice",h:"La práctica gana." },
+  { w:"Safety", h:"Primero seguro, luego rápido." },
+  { w:"Routine",h:"Rutina simple = resultados." },
+  { w:"Clarity",h:"Claridad antes de acción." },
+  { w:"Commit", h:"Compromiso con tu meta." }
+];
+
+function daySeed(){
+  const d = new Date();
+  return d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate(); // YYYYMMDD
+}
+function pickDaily(list, seed){
+  const idx = Math.abs((seed * 9301 + 49297) % 233280) % list.length;
+  return list[idx];
+}
+const todayPick = pickDaily(WORDS, daySeed());
+document.getElementById("wordDay").innerText = todayPick.w;
+document.getElementById("wordHint").innerText = todayPick.h;
+
+/* ====== ELECTRIC TIP OF THE DAY (stable per day) ====== */
+const ELEC_TIPS = [
+  { t:"Regla rápida: P = V × I", h:"Ej: 120V y 5A → 600W." },
+  { t:"Antes de tocar: prueba tu tester en una fuente conocida", h:"‘Test before touch’ evita falsos ‘muertos’." },
+  { t:"Si un breaker se dispara: sospecha corto antes que sobrecarga", h:"Olor a quemado o chispazo = corto probable." },
+  { t:"Caída de voltaje: a mayor distancia, mayor caída", h:"Cables largos + carga alta → luces bajan." },
+  { t:"Polaridad importa: hot (negro) a brass, neutral (blanco) a silver", h:"GFCI/AFI pueden fallar si está mal cableado." },
+  { t:"GFCI: ‘Line’ alimenta, ‘Load’ protege lo de abajo", h:"Si inviertes, no protege o no resetea." },
+  { t:"Ohm básico: más resistencia → menos corriente (I = V/R)", h:"Útil para diagnosticar calentamientos." },
+  { t:"Continuidad NO es voltaje", h:"Un cable puede ‘sonar’ y aun así estar mal energizado." },
+  { t:"Splice correcto: mismo material, buen torque, y caja accesible", h:"NEC: empalmes deben quedar en caja accesible." },
+  { t:"Motor no arranca: revisa alimentación, capacitor y carga mecánica", h:"Una cosa mala te engaña como ‘motor dañado’." }
+];
+
+const tipPick = pickDaily(ELEC_TIPS, daySeed() + 7);
+document.getElementById("elecTip").innerText = tipPick.t;
+document.getElementById("elecHint").innerText = tipPick.h;
+
+/* ====== NOTE ABOUT GOOGLE ICS + CORS ======
+If your Google ICS URL fails to load in Fire TV browser due to CORS:
+Option 1 (Recommended): Host a tiny proxy on your network (Raspberry Pi / PC) that fetches the ICS and serves it with CORS headers.
+Option 2: Use a public CORS proxy (not recommended for privacy).
+Option 3: Instead of fetch(), embed a Google Calendar "Agenda" view iframe (no ICS parsing) — easiest, but less custom.
+*/
+</script>
+</body>
+</html>
